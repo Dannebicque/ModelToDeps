@@ -1,0 +1,56 @@
+{
+  "nodes": [
+    {
+      "id": 4,
+      "node_type": "oval",
+      "x": 50.0,
+      "y": 5.0,
+      "width": 120.0,
+      "height": 60.0,
+      "label": "\u00c9tape",
+      "color": "#ffffff"
+    },
+    {
+      "id": 3,
+      "node_type": "rect",
+      "x": -193.0,
+      "y": -1.0,
+      "width": 120.0,
+      "height": 60.0,
+      "label": "Box",
+      "color": "#ffffff"
+    },
+    {
+      "id": 2,
+      "node_type": "oval",
+      "x": 32.0,
+      "y": -99.0,
+      "width": 120.0,
+      "height": 60.0,
+      "label": "\u00c9tape",
+      "color": "#ffffff"
+    },
+    {
+      "id": 1,
+      "node_type": "rect",
+      "x": -211.0,
+      "y": -194.0,
+      "width": 120.0,
+      "height": 60.0,
+      "label": "Box",
+      "color": "#ffffff"
+    }
+  ],
+  "edges": [
+    {
+      "source_id": 3,
+      "target_id": 4,
+      "color": "#ffff0c"
+    },
+    {
+      "source_id": 1,
+      "target_id": 2,
+      "color": "#e6ff3c"
+    }
+  ]
+}
