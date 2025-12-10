@@ -1,4 +1,4 @@
-# ui/pages/wizard/step_03_logic.py
+# ui/pages/wizard/step_03_task.py
 
 from PySide6.QtWidgets import (
     QVBoxLayout,
@@ -17,7 +17,7 @@ from .base_step import BaseWizardStep
 from .step_status import StepStatus
 
 
-class Step03Logic(BaseWizardStep):
+class Step06Succession(BaseWizardStep):
     """
     Étape 3 : logique.
     Palette de composants logiques + zone de dessin.

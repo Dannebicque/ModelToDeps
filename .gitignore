@@ -1,0 +1,35 @@
+# Environnements virtuels (Poetry: si `virtualenvs.in-project = true`)
+.venv/
+venv/
+env/
+ENV/
+
+# Fichiers Python temporaires
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# Artefacts de build / distribution
+build/
+dist/
+*.egg-info/
+
+# Caches & rapports de tests/typage
+.pytest_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+
+# Fichiers d'environnement locaux
+.env
+.local/
+
+# IDEs / éditeurs
+.idea/
+*.iml
+.vscode/
+
+# macOS
+.DS_Store

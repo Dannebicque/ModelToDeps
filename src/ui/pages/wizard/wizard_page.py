@@ -12,7 +12,6 @@ from PySide6.QtWidgets import (
     QPushButton,
     QStackedWidget,
 )
-from PySide6.QtCore import Qt
 
 from app.app_context import AppContext
 from domain.models.project import Project
@@ -20,10 +19,14 @@ from domain.models.project import Project
 from .base_step import BaseWizardStep
 from .step_status import StepStatus
 
-from .step_01_archi import Step01Archi
-from .step_02_signaux import Step02Signaux
-from .step_03_logic import Step03Logic
-# ... à compléter avec tes autres steps
+from .step_01_system import Step01System
+from .step_02_observer import Step02Observer
+from .step_03_task import Step03Task
+from .step_04_intra_task import Step04IntraTask
+from .step_05_inter_task import Step05InterTask
+from .step_06_succession import Step06Succession
+from .step_07_priority import Step07Priority
+from .step_08_global import Step08Global
 
 
 @dataclass
@@ -60,13 +63,14 @@ class WizardPage(QWidget):
             return StepMeta(id=step_id, title=title, widget=widget)
 
         self.steps = [
-            make_step(Step01Archi, "step_01_archi", "Architecture"),
-            make_step(Step02Signaux, "step_02_signaux", "Signaux / IO"),
-            make_step(Step03Logic, "step_03_logic", "Logique"),
-            # ajoute ici les autres :
-            # make_step(Step04Safety, "step_04_safety", "Sécurité"),
-            # make_step(Step05Sequences, "step_05_sequences", "Séquences"),
-            # make_step(Step06Summary, "step_06_summary", "Synthèse"),
+            make_step(Step01System, "step_01_system", "Système"),
+            make_step(Step02Observer, "step_02_observer", "Observateur"),
+            make_step(Step03Task, "step_03_task", "Tâches"),
+            make_step(Step04IntraTask, "step_04_intra_task", "Intra-tâche"),
+            make_step(Step05InterTask, "step_05_inter_task", "Inter-tâche"),
+            make_step(Step06Succession, "step_06_succession", "Succession"),
+            make_step(Step07Priority, "step_07_priority", "Priorités"),
+            make_step(Step08Global, "step_08_global", "Global"),
         ]
 
         for meta in self.steps:

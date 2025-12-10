@@ -1,8 +1,7 @@
 from pathlib import Path
-from typing import Optional
 
 from PySide6.QtWidgets import (
-    QMainWindow, QStackedWidget, QFileDialog, QMessageBox, QStatusBar
+    QMainWindow, QStackedWidget, QFileDialog, QStatusBar
 )
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QMessageBox
@@ -25,7 +24,7 @@ class MainWindow(QMainWindow):
         self.project_repository = ProjectRepository()
         self.deps_generator = DepsGenerator()
 
-        self.setWindowTitle("DEPS Designer")
+        self.setWindowTitle("Model To Deps")
         self.resize(1200, 800)
 
         # Pages
