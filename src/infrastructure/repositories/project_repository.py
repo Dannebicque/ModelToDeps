@@ -2,7 +2,14 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from domain.models.project import Project, StepData
-from domain.models.diagram import Diagram, Node, Connection, DiagramType, NodeType
+from domain.models.diagram import (
+    Diagram,
+    Node,
+    Connection,
+    DiagramType,
+    NodeType,
+    NodeAppearance,
+)
 from infrastructure.storage.file_storage import FileStorage
 
 
@@ -34,6 +41,7 @@ class ProjectRepository:
                                     "label": n.label,
                                     "x": n.x,
                                     "y": n.y,
+                                    "appearance": n.appearance.to_dict(),
                                     "properties": n.properties,
                                 }
                                 for n in d.nodes
@@ -67,6 +75,7 @@ class ProjectRepository:
                         label=n["label"],
                         x=n["x"],
                         y=n["y"],
+                        appearance=NodeAppearance.from_dict(n.get("appearance")),
                         properties=n.get("properties", {}),
                     )
                     for n in d.get("nodes", [])

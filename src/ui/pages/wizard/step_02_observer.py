@@ -10,7 +10,14 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 
 from domain.models.project import StepData
-from domain.models.diagram import Diagram, DiagramType, Node, NodeType
+from domain.models.diagram import (
+    Diagram,
+    DiagramType,
+    Node,
+    Connection,
+    DiagramComponent,
+)
+from domain.models.component_catalog import default_components
 from ui.widgets.diagram_view import DiagramView
 from ui.widgets.component_library import ComponentLibraryWidget
 from .base_step import BaseWizardStep
@@ -30,8 +37,8 @@ class Step02Observer(BaseWizardStep):
 
         # Palette de composants (exemple)
         self.component_library = ComponentLibraryWidget(
-            title="Composants logiques",
-            components=["Contact NO", "Contact NF", "Bobine", "Temporisation"],
+            title="Bibliothèque graphique",
+            components=default_components(),
             on_component_selected=self._on_component_selected,
         )
 
@@ -43,14 +50,17 @@ class Step02Observer(BaseWizardStep):
         btn_zoom_in = QPushButton("Zoom +")
         btn_zoom_out = QPushButton("Zoom -")
         btn_reset = QPushButton("Réinitialiser vue")
+        btn_connect = QPushButton("Relier la sélection")
 
         btn_zoom_in.clicked.connect(self.diagram_view.zoom_in)
         btn_zoom_out.clicked.connect(self.diagram_view.zoom_out)
         btn_reset.clicked.connect(self.diagram_view.reset_view)
+        btn_connect.clicked.connect(self._connect_selected)
 
         toolbar.addWidget(btn_zoom_in)
         toolbar.addWidget(btn_zoom_out)
         toolbar.addWidget(btn_reset)
+        toolbar.addWidget(btn_connect)
         toolbar.addStretch()
 
         # Splitter : gauche palette, droite diagramme
@@ -85,19 +95,31 @@ class Step02Observer(BaseWizardStep):
 
     # -- Palette -> diagramme --
 
-    def _on_component_selected(self, name: str):
+    def _on_component_selected(self, component: DiagramComponent):
         if not self._diagram:
             return
 
-        # Exemple simple : on ajoute un node au centre
         node = Node.create(
-            node_type=NodeType.CONDITION,
-            label=name,
+            node_type=component.node_type,
+            label=component.display_name,
             x=50,
             y=50,
+            appearance=component.appearance,
+            properties=component.default_properties.copy(),
         )
         self._diagram.nodes.append(node)
         self.diagram_view.add_node(node)
+        self.mark_changed()
+
+    def _connect_selected(self):
+        if not self._diagram:
+            return
+        selected = list(self.diagram_view.get_selected_node_ids())
+        if len(selected) < 2:
+            return
+        connection = Connection.create(selected[0], selected[1])
+        self._diagram.connections.append(connection)
+        self.diagram_view.add_connection(connection)
         self.mark_changed()
 
     def _on_diagram_changed(self):
