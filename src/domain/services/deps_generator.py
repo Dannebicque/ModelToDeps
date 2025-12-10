@@ -20,9 +20,21 @@ class DepsGenerator:
             for diagram in step.diagrams:
                 lines.append(f"# Diagram: {diagram.name}")
                 for node in diagram.nodes:
-                    if node.type in (NodeType.CONDITION, NodeType.ACTION):
-                        eq = node.properties.get("equation", "")
-                        lines.append(f"NODE {node.id} {node.type.value} {node.label} EQUATION '{eq}'")
+                    eq = node.properties.get("equation", "")
+                    style = node.appearance
+                    style_tokens = [
+                        f"shape={style.shape.value}",
+                        f"border={style.border.value}",
+                        f"fill={style.fill_color}",
+                        f"stroke={style.border_color}",
+                    ]
+                    properties_tokens = [f"{k}={v}" for k, v in node.properties.items() if k != "equation"]
+                    payload = " ".join(style_tokens + properties_tokens)
+                    if eq:
+                        payload = f"{payload} EQUATION '{eq}'".strip()
+                    lines.append(
+                        f"NODE {node.id} {node.type.value} {node.label} {payload}".strip()
+                    )
             lines.append("")
 
         return "\n".join(lines)
