@@ -2,13 +2,22 @@
 
 from __future__ import annotations
 
-from typing import Optional, Callable, Dict, Iterable
+from typing import Optional, Callable, Dict, Iterable, Any
+from uuid import uuid4
 
 from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsItem
 from PySide6.QtGui import QPen, QBrush, QColor, QPainter, QWheelEvent, QPainterPath
 from PySide6.QtCore import Qt, QPointF, QRectF
 
-from domain.models.diagram import Diagram, Connection, Node, NodeAppearance, NodeShape, BorderStyle
+from domain.models.diagram import (
+    Diagram,
+    Connection,
+    Node,
+    NodeAppearance,
+    NodeShape,
+    BorderStyle,
+    NodeType,
+)
 
 
 NODE_WIDTH = 140
@@ -158,13 +167,67 @@ class DiagramView(QGraphicsView):
         if not diagram:
             return
 
+        normalized_nodes = []
         for node in getattr(diagram, "nodes", []):
-            self.add_node(node)
+            normalized = self._normalize_node(node)
+            if normalized:
+                normalized_nodes.append(normalized)
+                self.add_node(normalized)
+        diagram.nodes = normalized_nodes
 
+        normalized_connections = []
         for conn in getattr(diagram, "connections", []):
-            self.add_connection(conn)
+            normalized = self._normalize_connection(conn)
+            if normalized:
+                normalized_connections.append(normalized)
+                self.add_connection(normalized)
+        diagram.connections = normalized_connections
 
         self.reset_view()
+
+    def _normalize_node(self, node: Any) -> Optional[Node]:
+        if isinstance(node, Node):
+            return node
+
+        if isinstance(node, dict):
+            try:
+                node_id = str(node.get("id", uuid4()))
+                node_type_raw = node.get("type", NodeType.ACTION.value)
+                node_type = node_type_raw if isinstance(node_type_raw, NodeType) else NodeType(node_type_raw)
+                return Node(
+                    id=node_id,
+                    type=node_type,
+                    label=str(node.get("label", "")),
+                    x=float(node.get("x", 0)),
+                    y=float(node.get("y", 0)),
+                    appearance=NodeAppearance.from_dict(node.get("appearance")),
+                    properties=node.get("properties", {}),
+                )
+            except Exception as exc:  # pragma: no cover - defensive
+                print(f"[DiagramView] Impossible de normaliser le node {node!r}: {exc}")
+                return None
+
+        print(f"[DiagramView] Noeud ignoré car invalide: {node!r}")
+        return None
+
+    def _normalize_connection(self, connection: Any) -> Optional[Connection]:
+        if isinstance(connection, Connection):
+            return connection
+
+        if isinstance(connection, dict):
+            try:
+                return Connection(
+                    id=str(connection.get("id", uuid4())),
+                    source_id=str(connection["source_id"]),
+                    target_id=str(connection["target_id"]),
+                    label=str(connection.get("label", "")),
+                )
+            except Exception as exc:  # pragma: no cover - defensive
+                print(f"[DiagramView] Impossible de normaliser la connexion {connection!r}: {exc}")
+                return None
+
+        print(f"[DiagramView] Connexion ignorée car invalide: {connection!r}")
+        return None
 
     # -- Node management --
     def add_node(self, node: Node) -> None:
