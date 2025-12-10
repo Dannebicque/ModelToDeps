@@ -8,9 +8,9 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QLabel,
 )
-from PySide6.QtGui import QPainter, QBrush, QPen, QColor
-from PySide6.QtCore import Qt, QSize
-
+from PySide6.QtGui import QPainter, QBrush, QPen, QColor, QDrag
+from PySide6.QtCore import Qt, QSize, QMimeData
+from PySide6.QtWidgets import QListWidget
 from domain.models.diagram import DiagramComponent, NodeShape, BorderStyle
 
 
@@ -83,6 +83,49 @@ class ComponentLibraryItemWidget(QWidget):
         self.setLayout(layout)
 
 
+class DraggableComponentList(QListWidget):
+    MIME_TYPE = "application/x-diagram-component"
+
+    def __init__(
+        self,
+        on_component_selected: Optional[Callable[[DiagramComponent], None]] = None,
+        on_component_activated: Optional[Callable[[DiagramComponent], None]] = None,
+        parent=None,
+    ):
+        super().__init__(parent)
+        self._on_component_selected = on_component_selected
+        self._on_component_activated = on_component_activated
+        self.setSelectionMode(QListWidget.SingleSelection)
+        self.setDragEnabled(True)
+        self.currentItemChanged.connect(self._handle_selection_change)
+        self.itemDoubleClicked.connect(self._handle_double_click)
+
+    def startDrag(self, supportedActions):
+        item = self.currentItem()
+        if not item:
+            return
+        component: DiagramComponent = item.data(Qt.UserRole)
+        if component is None or not hasattr(component, "id"):
+            return
+        drag = QDrag(self)
+        mime_data = QMimeData()
+        mime_data.setData(self.MIME_TYPE, component.id.encode())
+        drag.setMimeData(mime_data)
+        drag.exec(Qt.CopyAction)
+
+    def _handle_selection_change(self, current: QListWidgetItem, previous: QListWidgetItem):  # noqa: ARG002
+        if self._on_component_selected and current:
+            component: DiagramComponent = current.data(Qt.UserRole)
+            if component:
+                self._on_component_selected(component)
+
+    def _handle_double_click(self, item: QListWidgetItem):
+        if self._on_component_activated and item:
+            component: DiagramComponent = item.data(Qt.UserRole)
+            if component:
+                self._on_component_activated(component)
+
+
 class ComponentLibraryWidget(QWidget):
     """Palette graphique réutilisable."""
 
@@ -91,10 +134,12 @@ class ComponentLibraryWidget(QWidget):
         title: str,
         components: Optional[List[DiagramComponent]] = None,
         on_component_selected: Optional[Callable[[DiagramComponent], None]] = None,
+        on_component_activated: Optional[Callable[[DiagramComponent], None]] = None,
         parent=None,
     ):
         super().__init__(parent)
         self._on_component_selected = on_component_selected
+        self._on_component_activated = on_component_activated
         self._components: List[DiagramComponent] = components or []
 
         layout = QVBoxLayout()
@@ -105,8 +150,10 @@ class ComponentLibraryWidget(QWidget):
         label.setStyleSheet("font-weight: bold;")
         layout.addWidget(label)
 
-        self.list_widget = QListWidget()
-        self.list_widget.itemDoubleClicked.connect(self._on_item_double_clicked)
+        self.list_widget = DraggableComponentList(
+            on_component_selected=self._on_component_selected,
+            on_component_activated=self._on_component_activated,
+        )
         layout.addWidget(self.list_widget)
 
         self.setLayout(layout)
@@ -118,14 +165,15 @@ class ComponentLibraryWidget(QWidget):
         self.list_widget.clear()
         for comp in components:
             item = QListWidgetItem()
-            item.setToolTip(comp.display_name)
             item.setData(Qt.UserRole, comp)
-            widget = ComponentLibraryItemWidget(comp)
-            item.setSizeHint(widget.sizeHint())
-            self.list_widget.addItem(item)
-            self.list_widget.setItemWidget(item, widget)
 
-    def _on_item_double_clicked(self, item: QListWidgetItem):
-        if self._on_component_selected:
-            comp: DiagramComponent = item.data(Qt.UserRole)
-            self._on_component_selected(comp)
+            if hasattr(comp, "display_name"):
+                item.setToolTip(getattr(comp, "display_name"))
+                widget = ComponentLibraryItemWidget(comp)
+                item.setSizeHint(widget.sizeHint())
+                self.list_widget.addItem(item)
+                self.list_widget.setItemWidget(item, widget)
+            else:
+                item.setText(str(comp))
+                item.setToolTip(str(comp))
+                self.list_widget.addItem(item)

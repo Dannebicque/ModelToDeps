@@ -9,6 +9,7 @@ from domain.models.diagram import (
     DiagramType,
     NodeType,
     NodeAppearance,
+    ConnectionType,
 )
 from infrastructure.storage.file_storage import FileStorage
 
@@ -52,6 +53,7 @@ class ProjectRepository:
                                     "source_id": c.source_id,
                                     "target_id": c.target_id,
                                     "label": c.label,
+                                    "type": c.type.value,
                                 }
                                 for c in d.connections
                             ],
@@ -86,6 +88,7 @@ class ProjectRepository:
                         source_id=c["source_id"],
                         target_id=c["target_id"],
                         label=c.get("label", ""),
+                        type=ConnectionType(c.get("type", ConnectionType.DEFAULT.value)),
                     )
                     for c in d.get("connections", [])
                 ]
