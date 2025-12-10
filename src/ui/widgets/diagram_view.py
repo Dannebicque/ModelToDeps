@@ -6,8 +6,16 @@ from typing import Optional, Callable, Dict, Iterable, Any
 from uuid import uuid4
 
 from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsItem
-from PySide6.QtGui import QPen, QBrush, QColor, QPainter, QWheelEvent, QPainterPath
-from PySide6.QtCore import Qt, QPointF, QRectF
+from PySide6.QtGui import (
+    QPen,
+    QBrush,
+    QColor,
+    QPainter,
+    QWheelEvent,
+    QPainterPath,
+    QDropEvent,
+)
+from PySide6.QtCore import Qt, QPointF, QRectF, QMimeData, QEvent
 
 from domain.models.diagram import (
     Diagram,
@@ -17,11 +25,20 @@ from domain.models.diagram import (
     NodeShape,
     BorderStyle,
     NodeType,
+    ConnectionType,
 )
 
 
 NODE_WIDTH = 140
 NODE_HEIGHT = 70
+COMPONENT_MIME_TYPE = "application/x-diagram-component"
+
+CONNECTION_COLORS: dict[ConnectionType, str] = {
+    ConnectionType.DEFAULT: "#555555",
+    ConnectionType.FLOW: "#0d99ff",
+    ConnectionType.CONDITION: "#f5a524",
+    ConnectionType.FEEDBACK: "#7b61ff",
+}
 
 
 class NodeGraphicsItem(QGraphicsItem):
@@ -79,12 +96,18 @@ class NodeGraphicsItem(QGraphicsItem):
 
 
 class ArrowItem(QGraphicsItem):
-    def __init__(self, source: NodeGraphicsItem, target: NodeGraphicsItem):
+    def __init__(
+        self,
+        source: NodeGraphicsItem,
+        target: NodeGraphicsItem,
+        connection_type: ConnectionType = ConnectionType.DEFAULT,
+    ):
         super().__init__()
         self.source = source
         self.target = target
         self.setZValue(0)
-        self.pen = QPen(QColor("#555"))
+        color = CONNECTION_COLORS.get(connection_type, CONNECTION_COLORS[ConnectionType.DEFAULT])
+        self.pen = QPen(QColor(color))
         self.pen.setWidth(2)
 
     def boundingRect(self) -> QRectF:
@@ -125,8 +148,14 @@ class DiagramView(QGraphicsView):
         self.node_items: Dict[str, NodeGraphicsItem] = {}
         self.connection_items: Dict[str, ArrowItem] = {}
 
+        self._add_component_callback: Optional[Callable[[str, QPointF], None]] = None
+        self._active_component_id: Optional[str] = None
+
         self.setRenderHint(QPainter.Antialiasing)
-        self.setDragMode(QGraphicsView.ScrollHandDrag)
+        self.setDragMode(QGraphicsView.RubberBandDrag)
+        self.setAcceptDrops(True)
+        self.viewport().setAcceptDrops(True)
+        self.viewport().installEventFilter(self)
 
         self._zoom = 1.0
 
@@ -157,6 +186,12 @@ class DiagramView(QGraphicsView):
     def center_on_diagram(self):
         if self.scene.items():
             self.centerOn(self.scene.itemsBoundingRect().center())
+
+    def set_component_adder(self, callback: Callable[[str, QPointF], None]):
+        self._add_component_callback = callback
+
+    def set_active_component(self, component_id: str | None):
+        self._active_component_id = component_id
 
     def set_diagram(self, diagram: "Diagram | None") -> None:
         self.diagram = diagram
@@ -221,6 +256,7 @@ class DiagramView(QGraphicsView):
                     source_id=str(connection["source_id"]),
                     target_id=str(connection["target_id"]),
                     label=str(connection.get("label", "")),
+                    type=ConnectionType(connection.get("type", ConnectionType.DEFAULT.value)),
                 )
             except Exception as exc:  # pragma: no cover - defensive
                 print(f"[DiagramView] Impossible de normaliser la connexion {connection!r}: {exc}")
@@ -253,7 +289,7 @@ class DiagramView(QGraphicsView):
         target_item = self.node_items.get(connection.target_id)
         if not source_item or not target_item:
             return
-        arrow = ArrowItem(source_item, target_item)
+        arrow = ArrowItem(source_item, target_item, connection.type)
         self.scene.addItem(arrow)
         self.connection_items[connection.id] = arrow
         self.on_changed()
@@ -265,4 +301,61 @@ class DiagramView(QGraphicsView):
                 or arrow.target.node.id == node_id
             ):
                 arrow.update()
+
+    # -- Interactions --
+    def _can_accept_drop(self, mime_data: QMimeData) -> bool:
+        return mime_data.hasFormat(COMPONENT_MIME_TYPE) and self._add_component_callback is not None
+
+    def _accept_drag_event(self, event: QDropEvent) -> bool:
+        if not self._can_accept_drop(event.mimeData()):
+            return False
+        event.acceptProposedAction()
+        return True
+
+    def _handle_drop(self, event: QDropEvent) -> None:
+        if not self._can_accept_drop(event.mimeData()):
+            return
+
+        component_id = bytes(event.mimeData().data(COMPONENT_MIME_TYPE)).decode()
+        position = self.mapToScene(event.position().toPoint())
+        if self._add_component_callback and component_id:
+            self._add_component_callback(component_id, position)
+        event.acceptProposedAction()
+
+    def eventFilter(self, watched, event):  # noqa: D401
+        if watched is self.viewport():
+            if event.type() in (QEvent.DragEnter, QEvent.DragMove):
+                if self._accept_drag_event(event):
+                    return True
+            elif event.type() == QEvent.Drop:
+                self._handle_drop(event)
+                return True
+        return super().eventFilter(watched, event)
+
+    def dragEnterEvent(self, event):  # noqa: D401
+        if not self._accept_drag_event(event):
+            super().dragEnterEvent(event)
+
+    def dragMoveEvent(self, event):
+        if not self._accept_drag_event(event):
+            super().dragMoveEvent(event)
+
+    def dropEvent(self, event):
+        if self._can_accept_drop(event.mimeData()):
+            self._handle_drop(event)
+        else:
+            super().dropEvent(event)
+
+    def mousePressEvent(self, event):
+        if (
+            event.button() == Qt.LeftButton
+            and self._active_component_id
+            and self._add_component_callback
+            and self.itemAt(event.position().toPoint()) is None
+        ):
+            position = self.mapToScene(event.position().toPoint())
+            self._add_component_callback(self._active_component_id, position)
+            event.accept()
+            return
+        super().mousePressEvent(event)
 

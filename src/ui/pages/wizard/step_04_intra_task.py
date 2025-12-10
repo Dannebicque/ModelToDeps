@@ -32,7 +32,7 @@ class Step04IntraTask(BaseWizardStep):
         self.component_library = ComponentLibraryWidget(
             title="Composants logiques",
             components=["Contact NO", "Contact NF", "Bobine", "Temporisation"],
-            on_component_selected=self._on_component_selected,
+            on_component_activated=self._on_component_selected,
         )
 
         # Zone de dessin
