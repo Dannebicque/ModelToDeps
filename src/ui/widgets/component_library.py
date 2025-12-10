@@ -18,70 +18,69 @@ class ComponentPreview(QWidget):
     def __init__(self, component: DiagramComponent, parent=None):
         super().__init__(parent)
         self.component = component
-        self.setMinimumHeight(48)
+        self.setMinimumHeight(64)
         self.setAttribute(Qt.WA_OpaquePaintEvent, True)
 
-
     def sizeHint(self) -> QSize:  # noqa: D401
-        return QSize(120, 48)
+        return QSize(140, 64)
 
     def paintEvent(self, event):
-        # Valider / résoudre self.component
-        comp = getattr(self, "component", None)
-        if isinstance(comp, str):
-            resolver = getattr(self, "lookup_component", None)
-            if callable(resolver):
-                comp = resolver(comp)
-            else:
-                # impossible de résoudre l'identifiant, ne rien peindre
-                return
-
+        comp = self.component
         if comp is None or not hasattr(comp, "appearance"):
             return
 
         appearance = comp.appearance
-        # Utiliser QPainter en s'assurant d'appeler end()
         painter = QPainter(self)
         try:
             painter.setRenderHint(QPainter.Antialiasing, True)
 
-            # Fond
-            painter.fillRect(self.rect(), self.palette().window())
+            rect = self.rect().adjusted(10, 10, -10, -10)
 
-            # Exemple basique: utiliser une couleur depuis appearance si disponible
-            color = getattr(appearance, "color", None)
-            if color:
-                painter.setBrush(QBrush(QColor(color)))
-                painter.setPen(Qt.NoPen)
-                painter.drawRect(self.rect())
+            pen = QPen(QColor(appearance.border_color))
+            pen.setWidth(2)
+            painter.setPen(pen)
+            painter.setBrush(QBrush(QColor(appearance.fill_color)))
 
-            # Ajouter ici le dessin spécifique basé sur appearance...
+            if appearance.shape == NodeShape.ELLIPSE:
+                painter.drawEllipse(rect)
+                if appearance.border == BorderStyle.DOUBLE:
+                    painter.drawEllipse(rect.adjusted(6, 6, -6, -6))
+            else:
+                painter.drawRoundedRect(rect, 8, 8)
+                if appearance.border == BorderStyle.DOUBLE:
+                    painter.drawRoundedRect(rect.adjusted(6, 6, -6, -6), 8, 8)
+
+            painter.setPen(QPen(QColor(appearance.text_color)))
+            painter.drawText(rect, Qt.AlignCenter | Qt.TextWordWrap, comp.display_name)
         finally:
-            # Assurer la libération du painter
             if painter.isActive():
                 painter.end()
 
-    # def paintEvent(self, event):
-    #     painter = QPainter(self)
-    #     painter.setRenderHint(QPainter.Antialiasing)
-    #     rect = self.rect().adjusted(8, 8, -8, -8)
-    #     appearance = self.component.appearance
-    #
-    #     pen = QPen(QColor(appearance.border_color))
-    #     pen.setWidth(2)
-    #     painter.setPen(pen)
-    #     painter.setBrush(QBrush(QColor(appearance.fill_color)))
-    #
-    #     if appearance.shape == NodeShape.ELLIPSE:
-    #         painter.drawEllipse(rect)
-    #         if appearance.border == BorderStyle.DOUBLE:
-    #             painter.drawEllipse(rect.adjusted(5, 5, -5, -5))
-    #     else:
-    #         painter.drawRoundedRect(rect, 6, 6)
-    #         if appearance.border == BorderStyle.DOUBLE:
-    #             painter.drawRoundedRect(rect.adjusted(5, 5, -5, -5), 6, 6)
-    #
-    #     painter.drawText(rect, Qt.AlignCenter, self.component.display_name)
+
+class ComponentLibraryItemWidget(QWidget):
+    """Composite widget: display name + preview box."""
+
+    def __init__(self, component: DiagramComponent, parent=None):
+        super().__init__(parent)
+        self.component = component
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(6)
+
+        name_label = QLabel(component.display_name)
+        name_label.setAlignment(Qt.AlignCenter)
+        name_label.setStyleSheet("font-weight: 600; font-size: 12px;")
+
+        preview = ComponentPreview(component)
+
+        for widget in (self, name_label, preview):
+            widget.setToolTip(component.display_name)
+
+        layout.addWidget(name_label)
+        layout.addWidget(preview)
+
+        self.setLayout(layout)
 
 
 class ComponentLibraryWidget(QWidget):
@@ -118,10 +117,10 @@ class ComponentLibraryWidget(QWidget):
         self._components = components
         self.list_widget.clear()
         for comp in components:
-            print(comp)
             item = QListWidgetItem()
+            item.setToolTip(comp.display_name)
             item.setData(Qt.UserRole, comp)
-            widget = ComponentPreview(comp)
+            widget = ComponentLibraryItemWidget(comp)
             item.setSizeHint(widget.sizeHint())
             self.list_widget.addItem(item)
             self.list_widget.setItemWidget(item, widget)
