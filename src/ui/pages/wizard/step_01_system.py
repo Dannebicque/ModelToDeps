@@ -7,7 +7,6 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSplitter,
     QComboBox,
-    QLabel,
 )
 from PySide6.QtCore import Qt, QPointF
 

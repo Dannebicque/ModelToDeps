@@ -6,16 +6,8 @@ from typing import Optional, Callable, Dict, Iterable, Any
 from uuid import uuid4
 
 from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsItem
-from PySide6.QtGui import (
-    QPen,
-    QBrush,
-    QColor,
-    QPainter,
-    QWheelEvent,
-    QPainterPath,
-    QDropEvent,
-)
-from PySide6.QtCore import Qt, QPointF, QRectF, QMimeData, QEvent
+from PySide6.QtGui import QPen, QBrush, QColor, QPainter, QWheelEvent, QPainterPath
+from PySide6.QtCore import Qt, QPointF, QRectF, QMimeData
 
 from domain.models.diagram import (
     Diagram,
@@ -154,8 +146,6 @@ class DiagramView(QGraphicsView):
         self.setRenderHint(QPainter.Antialiasing)
         self.setDragMode(QGraphicsView.RubberBandDrag)
         self.setAcceptDrops(True)
-        self.viewport().setAcceptDrops(True)
-        self.viewport().installEventFilter(self)
 
         self._zoom = 1.0
 
@@ -306,14 +296,21 @@ class DiagramView(QGraphicsView):
     def _can_accept_drop(self, mime_data: QMimeData) -> bool:
         return mime_data.hasFormat(COMPONENT_MIME_TYPE) and self._add_component_callback is not None
 
-    def _accept_drag_event(self, event: QDropEvent) -> bool:
-        if not self._can_accept_drop(event.mimeData()):
-            return False
-        event.acceptProposedAction()
-        return True
+    def dragEnterEvent(self, event):  # noqa: D401
+        if self._can_accept_drop(event.mimeData()):
+            event.acceptProposedAction()
+        else:
+            super().dragEnterEvent(event)
 
-    def _handle_drop(self, event: QDropEvent) -> None:
+    def dragMoveEvent(self, event):
+        if self._can_accept_drop(event.mimeData()):
+            event.acceptProposedAction()
+        else:
+            super().dragMoveEvent(event)
+
+    def dropEvent(self, event):
         if not self._can_accept_drop(event.mimeData()):
+            super().dropEvent(event)
             return
 
         component_id = bytes(event.mimeData().data(COMPONENT_MIME_TYPE)).decode()
@@ -321,30 +318,6 @@ class DiagramView(QGraphicsView):
         if self._add_component_callback and component_id:
             self._add_component_callback(component_id, position)
         event.acceptProposedAction()
-
-    def eventFilter(self, watched, event):  # noqa: D401
-        if watched is self.viewport():
-            if event.type() in (QEvent.DragEnter, QEvent.DragMove):
-                if self._accept_drag_event(event):
-                    return True
-            elif event.type() == QEvent.Drop:
-                self._handle_drop(event)
-                return True
-        return super().eventFilter(watched, event)
-
-    def dragEnterEvent(self, event):  # noqa: D401
-        if not self._accept_drag_event(event):
-            super().dragEnterEvent(event)
-
-    def dragMoveEvent(self, event):
-        if not self._accept_drag_event(event):
-            super().dragMoveEvent(event)
-
-    def dropEvent(self, event):
-        if self._can_accept_drop(event.mimeData()):
-            self._handle_drop(event)
-        else:
-            super().dropEvent(event)
 
     def mousePressEvent(self, event):
         if (
