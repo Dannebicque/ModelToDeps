@@ -39,7 +39,7 @@ class Step08Global(BaseWizardStep):
         self.component_library = ComponentLibraryWidget(
             title="Bibliothèque graphique",
             components=default_components(),
-            on_component_selected=self._on_component_selected,
+            on_component_activated=self._on_component_selected,
         )
 
         # Zone de dessin

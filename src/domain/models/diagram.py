@@ -24,6 +24,13 @@ class BorderStyle(str, Enum):
     DOUBLE = "double"
 
 
+class ConnectionType(str, Enum):
+    DEFAULT = "default"
+    FLOW = "flow"
+    CONDITION = "condition"
+    FEEDBACK = "feedback"
+
+
 @dataclass
 class NodeAppearance:
     shape: NodeShape = NodeShape.RECTANGLE
@@ -91,14 +98,21 @@ class Connection:
     source_id: str
     target_id: str
     label: str = ""  # ex: "TRUE path", "FALSE path"
+    type: ConnectionType = ConnectionType.DEFAULT
 
     @staticmethod
-    def create(source_id: str, target_id: str, label: str = "") -> "Connection":
+    def create(
+        source_id: str,
+        target_id: str,
+        label: str = "",
+        connection_type: ConnectionType = ConnectionType.DEFAULT,
+    ) -> "Connection":
         return Connection(
             id=str(uuid.uuid4()),
             source_id=source_id,
             target_id=target_id,
             label=label,
+            type=connection_type,
         )
 
 
