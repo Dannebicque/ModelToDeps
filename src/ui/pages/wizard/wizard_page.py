@@ -64,13 +64,13 @@ class WizardPage(QWidget):
 
         self.steps = [
             make_step(Step01System, "step_01_system", "Système"),
-            make_step(Step02Observer, "step_02_observer", "Observateur"),
+            # make_step(Step02Observer, "step_02_observer", "Observateur"),
             make_step(Step03Task, "step_03_task", "Tâches"),
-            make_step(Step04IntraTask, "step_04_intra_task", "Intra-tâche"),
-            make_step(Step05InterTask, "step_05_inter_task", "Inter-tâche"),
-            make_step(Step06Succession, "step_06_succession", "Succession"),
-            make_step(Step07Priority, "step_07_priority", "Priorités"),
-            make_step(Step08Global, "step_08_global", "Global"),
+            # make_step(Step04IntraTask, "step_04_intra_task", "Intra-tâche"),
+            # make_step(Step05InterTask, "step_05_inter_task", "Inter-tâche"),
+            # make_step(Step06Succession, "step_06_succession", "Succession"),
+            # make_step(Step07Priority, "step_07_priority", "Priorités"),
+            # make_step(Step08Global, "step_08_global", "Global"),
         ]
 
         for meta in self.steps:
