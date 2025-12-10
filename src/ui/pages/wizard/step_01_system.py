@@ -76,6 +76,11 @@ class Step01System(BaseWizardStep):
         toolbar.addWidget(self.connection_type_combo)
         toolbar.addStretch()
 
+        helper = QLabel(
+            "Sélectionnez un composant, puis glissez-le dans la zone ou cliquez sur un espace vide pour l'ajouter."
+        )
+        helper.setWordWrap(True)
+
         # Splitter : gauche palette, droite diagramme
         splitter = QSplitter()
         splitter.setOrientation(Qt.Horizontal)
@@ -86,6 +91,7 @@ class Step01System(BaseWizardStep):
 
         layout = QVBoxLayout()
         layout.addLayout(toolbar)
+        layout.addWidget(helper)
         layout.addWidget(splitter)
         self.setLayout(layout)
 
